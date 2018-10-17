@@ -2,7 +2,7 @@
 # For details of the simulation study, check the book chapter
 
 # Total number of tests
-m <- 5000
+m <- 1000
 # number of samples in each group
 n <- 2
 # Proportion of null
