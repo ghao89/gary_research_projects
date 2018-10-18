@@ -25,7 +25,7 @@ source("Helper/get_fdr.R")
 rep <- 5
 
 # Nominal significance level
-alpha <- seq(0.01, 0.25, by = 0.02)
+alpha <- seq(0.01, 0.25, by = 0.04)
 
 # Prepare the result storage
 BH_power <- numeric(length(alpha))
