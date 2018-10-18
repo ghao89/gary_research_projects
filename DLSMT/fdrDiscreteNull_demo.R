@@ -17,9 +17,9 @@ library(ggplot2)
 # non_null_idx: indices indicating non-null (alternative) hypotheses
 # true_null_idx: indices indicating true null hypotheses
 
-load(file = "DLSMT/dat.Rdata")
-source("DLSMT/Helper/get_power.R")
-source("DLSMT/Helper/get_fdr.R")
+load(file = "dat.Rdata")
+source("Helper/get_power.R")
+source("Helper/get_fdr.R")
 
 # Number of replications for Habiger's method
 rep <- 5
@@ -41,7 +41,6 @@ aBHH_fdr <- numeric(length(alpha))
 habiger_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
 
 methods <- c("BH", "BHH", "aBH", "aBHH", "Habiger")
-
 
 # Use the GeneralizedFDREstimators function in fdrDiscreteNull package to get result
 res_alpha <- lapply(alpha, FUN = function(x) GeneralizedFDREstimators(data = dat, Test = "Fisher's Exact Test", FET_via = "IndividualMarginals", FDRlevel = x))
@@ -65,7 +64,6 @@ aBH_fdr <- unlist(lapply(aBH_detection, FUN = function(x) get_fdr(x, true_null_i
 aBHH_detection <- lapply(res_alpha, FUN = function(x) x$aBHH$IndicesOfDiscoveries)
 aBHH_power <- unlist(lapply(aBHH_detection, FUN = function(x) get_power(x, non_null_idx)))
 aBHH_fdr <- unlist(lapply(aBHH_detection, FUN = function(x) get_fdr(x, true_null_idx)))
-
 
 for (i in 1:rep) { 
   res_alpha <- lapply(alpha, FUN = function(x) GeneralizedFDREstimators(data = dat, Test = "Fisher's Exact Test", FET_via = "IndividualMarginals", FDRlevel = x))
