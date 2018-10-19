@@ -105,7 +105,7 @@ for (n in n_vec) {
       ##########################################################
       # Utilizing the package "fdrDiscreteNull", which computes BH, BHH, aBH, aBHH, Habiger's Method, 
       # and provide p-value support required for the Gilbert method
-      res_alpha <- lapply(alpha, FUN = function(x) GeneralizedFDREstimators(data = , Test = "Fisher's Exact Test", FET_via = "IndividualMarginals", FDRlevel = x))
+      res_alpha <- lapply(alpha, FUN = function(x) GeneralizedFDREstimators(data = dat, Test = "Fisher's Exact Test", FET_via = "IndividualMarginals", FDRlevel = x))
       res <- res_alpha[[1]]
     
       BH_detection <- lapply(res_alpha, FUN = function(x) x$BH$IndicesOfDiscoveries)
