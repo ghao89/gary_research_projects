@@ -10,7 +10,7 @@
 # Output:
 # Indices of detected (rejected) tests
 
-mcf_detection <- function(lambda_star, p_prev, p_org, randp_ecdf) {
+mcf_detect <- function(lambda_star, p_prev, p_org, randp_ecdf) {
   cdf <- sum(randp_ecdf < lambda_star)/length(randp_ecdf)
   r <- unlist(lapply(1:length(p_org), FUN = function(x) (lambda_star > p_org[x])*1 + (lambda_star < p_prev[x])*0 + (lambda_star >= p_prev[x] && lambda_star <= p_org[x])*(lambda_star - p_prev[x])/(p_org[x] - p_prev[x])))
   detection <- which(r >= quantile(r, probs = 1 - cdf))
