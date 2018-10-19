@@ -25,12 +25,12 @@ p_2[non_null_idx] <- p_1[non_null_idx] + runif(length(non_null_idx), 0.2, 0.5)
 # Number of trials
 n_trial_1 <- replicate(n, rpois(m, mu_pois))
 n_trial_2 <- replicate(n, rpois(m, mu_pois))
-# n_trial <- cbind(n_trial_1, n_trial_2)
+n_trial <- cbind(n_trial_1, n_trial_2)
 
 # Binomial draws
 bin_1 <- apply(n_trial_1, 2, FUN = function(x, m, p) rbinom(m, x, p), m = m, p = p_1)
 bin_2 <- apply(n_trial_2, 2, FUN = function(x, m, p) rbinom(m, x, p), m = m, p = p_2)
-# binom <- cbind(bin_1, bin_2)
+binom <- cbind(bin_1, bin_2)
 
 # The constructed data can be used directly for fdrDiscreteNull package "GeneralizedFDREstimators"
 # function
