@@ -15,7 +15,7 @@ load(file = "dat.Rdata")
 source("Helper/get_power.R")
 source("Helper/get_fdr.R")
 source("Helper/get_prev.R")
-source("Helper/mcf_detection.R")
+source("Helper/mcf_detect.R")
 
 # Number of tests
 m <- nrow(dat)
@@ -51,7 +51,7 @@ pi0 <- mean(apply(replicated_randp, 2, FUN = function(x) (1 + sum(x > lambda_sto
 # Thresholding p-values from Habiger's method
 lambda_star <- unlist(lapply(res_alpha, FUN = function(x) x$SARP$Threshold))
 # Get detections (rejections)
-mcf_detection <- lapply(lambda_star, FUN = function(x, p_prev, p_org, randp_ecdf) mcf_detection(x, p_prev, p_org, randp_ecdf), p_prev = p_prev, p_org = p_org, randp_ecdf = randp_ecdf)
+mcf_detection <- lapply(lambda_star, FUN = function(x, p_prev, p_org, randp_ecdf) mcf_detect(x, p_prev, p_org, randp_ecdf), p_prev = p_prev, p_org = p_org, randp_ecdf = randp_ecdf)
 
 # Prepare results for plotting
 mcf_power <- unlist(lapply(mcf_detection, FUN = function(x) get_power(x, non_null_idx)))
