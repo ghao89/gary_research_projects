@@ -233,6 +233,8 @@ for (n in n_vec) {
     
     save(summ, file = paste0("Results/n = ", n, "_pi0 = ", pi_0, "_rep = ", rep, ".Rdata"))
     
+    # Moniter progress
+    print(paste0("The case n = ", n, ", pi_0 = ", pi_0, " has completed!" ))
   }
 }
 
