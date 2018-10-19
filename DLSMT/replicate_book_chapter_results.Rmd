@@ -1,0 +1,266 @@
+---
+title: "Replicate_book_chapter_results"
+author: "Guanshengrui Hao"
+date: "10/18/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Simulation
+
+```{r simulation, message=FALSE}
+library(fdrDiscreteNull)
+library(ggplot2)
+library(gridExtra)
+library(grid)
+
+# Load helper functions
+source("Helper/find_BH_threshold.R")
+source("Helper/find_Gilbert_threshold.R")
+source("Helper/get_fdr.R")
+source("Helper/get_power.R")
+source("Helper/get_prev.R")
+source("Helper/mcf_detect.R")
+
+# Number of replications
+rep <- 100
+
+# Significance level
+alpha <- seq(0.01, 0.25, by = 0.04)
+
+t <- proc.time()
+# Number of samples in each group
+n_vec <- c(2, 5)
+# Proportion of true null
+pi_0_vec <- c(0.3, 0.6, 0.9)
+
+for (n in n_vec) {
+  for (pi_0 in pi_0_vec) {
+
+    ##########################################################
+    ###############      Prepare storage      ################    
+    ##########################################################
+      
+    BH_power <- matrix(0, nrow = length(alpha), ncol = rep)
+    aBH_power <- matrix(0, nrow = length(alpha), ncol = rep)
+    BHH_power <- matrix(0, nrow = length(alpha), ncol = rep)
+    aBHH_power <- matrix(0, nrow = length(alpha), ncol = rep)
+    habiger_power <- matrix(0, nrow = length(alpha), ncol = rep)
+    gilbert_power <- matrix(0, nrow = length(alpha), ncol = rep)
+    mcf_power <- matrix(0, nrow = length(alpha), ncol = rep)
+    storey_power <- matrix(0, nrow = length(alpha), ncol = rep)
+    liang_power <- matrix(0, nrow = length(alpha), ncol = rep)
+        
+    BH_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
+    aBH_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
+    BHH_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
+    aBHH_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
+    habiger_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
+    gilbert_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
+    mcf_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
+    storey_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
+    liang_fdr <- matrix(0, nrow = length(alpha), ncol = rep)
+      
+    methods <- c("BH", "aBH", "BHH", "aBHH", "Habiger", "Gilbert", "MCF", "Storey", "Liang")
+           
+    for (i in (1:rep)) {
+      ##########################################################
+      ###############      Simulation Setup     ################    
+      ##########################################################  
+      # Number of tests
+      m <- 5000
+      # Poisson mean
+      mu_pois <- 20
+      # Index of true null
+      true_null_idx <- sample(m, m*pi_0, replace = FALSE)
+      non_null_idx <- (1:m)[-true_null_idx]
+      # Binomial mean
+      p_1 <- rep(0, m)
+      p_2 <- rep(0, m)
+      
+      p_1[true_null_idx] <- runif(length(true_null_idx))
+      p_2[true_null_idx] <- p_1[true_null_idx]
+      p_1[non_null_idx] <- runif(length(non_null_idx), 0, 0.5)
+      p_2[non_null_idx] <- p_1[non_null_idx] + runif(length(non_null_idx), 0.2, 0.5)
+      
+      # Number of trials
+      n_trial_1 <- replicate(n, rpois(m, mu_pois))
+      n_trial_2 <- replicate(n, rpois(m, mu_pois))
+      n_trial <- cbind(n_trial_1, n_trial_2)
+      
+      # Binomial draws
+      bin_1 <- apply(n_trial_1, 2, FUN = function(x, m, p) rbinom(m, x, p), m = m, p = p_1)
+      bin_2 <- apply(n_trial_2, 2, FUN = function(x, m, p) rbinom(m, x, p), m = m, p = p_2)
+      binom <- cbind(bin_1, bin_2)
+    
+      ##########################################################
+      ###############      fdrDiscreteNull      ################    
+      ##########################################################
+      # Utilizing the package "fdrDiscreteNull", which computes BH, BHH, aBH, aBHH, Habiger's Method, 
+      # and provide p-value support required for the Gilbert method
+      res_alpha <- lapply(alpha, FUN = function(x) GeneralizedFDREstimators(data = cbind(apply(bin_1, 1, sum), apply(bin_2, 1, sum), apply(n_trial_1, 1, sum), apply(n_trial_2, 1, sum)), Test = "Fisher's Exact Test", FET_via = "IndividualMarginals", FDRlevel = x))
+      res <- res_alpha[[1]]
+    
+      BH_detection <- lapply(res_alpha, FUN = function(x) x$BH$IndicesOfDiscoveries)
+      aBH_detection <- lapply(res_alpha, FUN = function(x) x$aBH$IndicesOfDiscoveries)
+      BHH_detection <- lapply(res_alpha, FUN = function(x) x$BHH$IndicesOfDiscoveries)
+      aBHH_detection <- lapply(res_alpha, FUN = function(x) x$aBHH$IndicesOfDiscoveries)
+      
+      habiger_detection <- lapply(res_alpha, FUN = function(x) x$SARP$IndicesOfDiscoveries)
+    
+      ##########################################################
+      ###################      Storey      #####################
+      ##########################################################  
+      
+      lambda_storey <- 0.5
+      pi0_storey <- min((1 + sum(res$pvalues > lambda_storey))/((1 - lambda_storey)*m), 1)
+      q_storey <- pi0_storey*m*res$pvalues/unlist(lapply(res$pvalues, FUN = function(x, pval) max(sum(pval < x),1), pval = res$pvalues))
+      storey_detection <- lapply(alpha, FUN = function(x) which(q_storey <= x))
+    
+      ##########################################################
+      ###################      Liang       #####################
+      ########################################################## 
+      
+      perms <- combn(seq(1:ncol(n_trial)), ncol(n_trial)/2)
+      perms <- perms[, 1:(ncol(perms)/2)]
+      stat_liang <- matrix(0, nrow = m, ncol = ncol(perms))
+      for (j in 1:ncol(perms)) {
+        b_1 <- apply(binom[, perms[,j]], 1, sum)
+        b_2 <- apply(binom[, -perms[,j]], 1, sum)
+        n_1 <- apply(n_trial[, perms[,j]], 1, sum)
+        n_2 <- apply(n_trial[, -perms[,j]], 1, sum)
+        stat_liang[, j] <- abs(b_1/n_1 - b_2/n_2)
+      }
+      
+      rank <- apply(stat_liang, 1, FUN = function(x) rank(x, ties.method = "first")[1])
+      p_val_liang <- (ncol(perms) + 1 - rank)/(ncol(perms))
+      p_cand <- seq(1/ncol(perms), 1, by = 1/ncol(perms))
+      c <- c(0, p_cand[which(p_cand < 0.5)], 0.5)
+      pi_0_hat <- unlist(lapply(c, FUN = function(x, p_val) sum(p_val > x)/(1 - x)/length(p_val), p_val = p_val_liang))
+      idx <- which(pi_0_hat[-1] - pi_0_hat[-length(pi_0_hat)] > 0)
+      pi0_liang <- min(ifelse(length(idx) == 0, pi_0_hat[length(pi_0_hat)], pi_0_hat[min(idx) + 1]), 1)
+      q_liang <- pi0_liang*m*res$pvalues/unlist(lapply(res$pvalues, FUN = function(x, pval) max(sum(pval < x),1), pval = res$pvalues))
+      liang_detection <- lapply(alpha, FUN = function(x) which(q_liang <= x))
+      
+      ##########################################################
+      ###################   Gilbert 2005   #####################
+      ##########################################################
+      
+      pval_supp_min <- unlist(lapply(res$pvalSupp, min))
+      # Find the p-value threshold from the subset of tests
+      thres_gilbert <- unlist(lapply(alpha, FUN = function(x, p_val, pval_supp_min) find_Gilbert_threshold(p_val, pval_supp_min, x), p_val = res$pvalues, pval_supp_min = pval_supp_min))
+      
+      gilbert_detection <- lapply(thres_gilbert, FUN = function(x, p_val) which(p_val <= x), p_val = res$pvalues)
+    
+      ##########################################################
+      ###################        MCF       #####################
+      ##########################################################    
+      
+      p_org <- res$pvalues
+      p_prev <- unlist(lapply(1:m, FUN = function(x, pval, pval_supp) get_prev(pval_supp[[x]], pval[x]), pval = p_org, pval_supp = res$pvalSupp))
+      
+      B <- 200
+      B_ecdf <- B*m
+      replicated_randp <- replicate(B, runif(m, p_prev, p_org))
+      randp_ecdf <- as.vector(replicated_randp)
+      pi0 <- mean(apply(replicated_randp, 2, FUN = function(x) (1 + sum(x > lambda_storey))/((1 - lambda_storey)*m)))
+      
+      lambda_star <- unlist(lapply(res_alpha, FUN = function(x) x$SARP$Threshold))
+      
+      mcf_detection <- lapply(lambda_star, FUN = function(x, p_prev, p_org, randp_ecdf) mcf_detect(x, p_prev, p_org, randp_ecdf), p_prev = p_prev, p_org = p_org, randp_ecdf = randp_ecdf)
+    
+      ##########################################################
+      ###################   Summarization   ####################
+      ##########################################################
+    
+      BH_power[, i] <- unlist(lapply(BH_detection, FUN = function(x) get_power(x, non_null_idx)))
+      aBH_power[, i] <- unlist(lapply(aBH_detection, FUN = function(x)  get_power(x, non_null_idx)))
+      BHH_power[, i] <- unlist(lapply(BHH_detection, FUN = function(x) get_power(x, non_null_idx)))
+      aBHH_power[, i] <- unlist(lapply(aBHH_detection, FUN = function(x) get_power(x, non_null_idx)))
+      habiger_power[, i] <- unlist(lapply(habiger_detection, FUN = function(x) get_power(x, non_null_idx)))
+      gilbert_power[, i] <- unlist(lapply(gilbert_detection, FUN = function(x) get_power(x, non_null_idx)))
+      mcf_power[, i] <- unlist(lapply(mcf_detection, FUN = function(x) get_power(x, non_null_idx)))
+      storey_power[, i] <- unlist(lapply(storey_detection, FUN = function(x) get_power(x, non_null_idx)))
+      liang_power[, i] <- unlist(lapply(liang_detection, FUN = function(x) get_power(x, non_null_idx)))
+      
+      BH_fdr[, i] <- unlist(lapply(BH_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+      aBH_fdr[, i] <- unlist(lapply(aBH_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+      BHH_fdr[, i] <- unlist(lapply(BHH_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+      aBHH_fdr[, i] <- unlist(lapply(aBHH_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+      habiger_fdr[, i] <- unlist(lapply(habiger_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+      gilbert_fdr[, i] <- unlist(lapply(gilbert_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+      mcf_fdr[, i] <- unlist(lapply(mcf_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+      storey_fdr[, i] <- unlist(lapply(storey_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+      liang_fdr[, i] <- unlist(lapply(liang_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+        
+      print(paste0("The ", i, "th replication has completed!"))
+    }
+    
+    BH_power_sd <- apply(BH_power, 1, sd)
+    aBH_power_sd <- apply(aBH_power, 1, sd)
+    BHH_power_sd <- apply(BHH_power, 1, sd)
+    aBHH_power_sd <- apply(aBHH_power, 1, sd)
+    habiger_power_sd <- apply(habiger_power, 1, sd)
+    gilbert_power_sd <- apply(gilbert_power, 1, sd)
+    mcf_power_sd <- apply(mcf_power, 1, sd)
+    storey_power_sd <- apply(storey_power, 1, sd)
+    liang_power_sd <- apply(liang_power, 1, sd)
+    
+    BH_fdr_sd <- apply(BH_fdr, 1, sd)
+    aBH_fdr_sd <- apply(aBH_fdr, 1, sd)
+    BHH_fdr_sd <- apply(BHH_fdr, 1, sd)
+    aBHH_fdr_sd <- apply(aBHH_fdr, 1, sd)
+    habiger_fdr_sd <- apply(habiger_fdr, 1, sd)
+    gilbert_fdr_sd <- apply(gilbert_fdr, 1, sd)
+    mcf_fdr_sd <- apply(mcf_fdr, 1, sd)
+    storey_fdr_sd <- apply(storey_fdr, 1, sd)
+    liang_fdr_sd <- apply(liang_fdr, 1, sd)
+    
+    
+    summ <- data.frame(matrix(0, ncol = 6, nrow = length(alpha)*length(methods)))
+    
+    summ[, 1] <- rep(alpha, length(methods))
+    summ[, 2] <- c(apply(BH_power, 1, mean), apply(aBH_power, 1, mean), apply(BHH_power, 1, mean), apply(aBHH_power, 1 ,mean), apply(habiger_power, 1, mean), apply(gilbert_power, 1, mean), apply(mcf_power, 1, mean), apply(storey_power, 1, mean), apply(liang_power, 1, mean))
+    summ[, 3] <- c(apply(BH_fdr, 1, mean), apply(aBH_fdr, 1, mean), apply(BHH_fdr, 1, mean), apply(aBHH_fdr, 1, mean), apply(habiger_fdr, 1, mean), apply(gilbert_fdr, 1, mean), apply(mcf_fdr, 1, mean), apply(storey_fdr, 1, mean), apply(liang_fdr, 1, mean))
+    summ[, 4] <- c(BH_power_sd, aBH_power_sd, BHH_power_sd, aBHH_power_sd, habiger_power_sd, gilbert_power_sd, mcf_power_sd, storey_power_sd, liang_power_sd)
+    summ[, 5] <- c(BH_fdr_sd, aBH_fdr_sd, BHH_fdr_sd, aBHH_fdr_sd, habiger_fdr_sd, gilbert_fdr_sd, mcf_fdr_sd, storey_fdr_sd, liang_power_sd)
+    summ[, 6] <- rep(methods, each = length(alpha))
+    
+    colnames(summ) <- c("alpha", "power", "fdr", "power_sd", "fdr_sd", "method")
+    
+    save(summ, file = paste0("Results/n = ", n, "_pi0 = ", pi_0, "_rep = ", rep, ".Rdata"))
+    
+  }
+}
+
+# Source the helper function to generated plot
+
+source("Helper/grid_arrange_shared_legend.R")
+
+power_plots <- list("")
+fdr_plots <- list("")
+
+for (pi_0 in pi_0_vec) {
+  for (n in n_vec) {
+    load(paste0("Results/n = ", n, "_pi0 = ", pi_0, "_rep = ", rep, ".Rdata"))
+    
+    if (pi_0 == pi_0_vec[1]) {
+      fdr_plots[[(which(pi_0_vec == pi_0) - 1)*length(n_vec) + which(n_vec == n)]] <- ggplot(data = summ, aes(x = alpha, y = fdr)) + geom_line(aes(color = method, linetype = method)) + geom_abline(slope = 1, intercept = 0) + xlab("Nominal FDR level") + ylab("True FDR") + ggtitle(paste0("L = ", n)) + theme(plot.title = element_text(hjust = 0.5))
+      
+      power_plots[[(which(pi_0_vec == pi_0) - 1)*length(n_vec) + which(n_vec == n)]] <- ggplot(data = summ, aes(x = alpha, y = power)) + geom_line(aes(color = method, linetype = method)) + xlab("Nominal FDR level") + ylab("True power") + ggtitle(paste0("L = ", n)) + theme(plot.title = element_text(hjust = 0.5))
+    } else {
+      fdr_plots[[(which(pi_0_vec == pi_0) - 1)*length(n_vec) + which(n_vec == n)]] <- ggplot(data = summ, aes(x = alpha, y = fdr)) + geom_line(aes(color = method, linetype = method)) + geom_abline(slope = 1, intercept = 0) + xlab("Nominal FDR level") + ylab("True FDR")
+      
+      power_plots[[(which(pi_0_vec == pi_0) - 1)*length(n_vec) + which(n_vec == n)]] <- ggplot(data = summ, aes(x = alpha, y = power)) + geom_line(aes(color = method, linetype = method)) + xlab("Nominal FDR level") + ylab("True power")
+    }
+  }
+}
+
+ggsave(file = "Plots/power_plot.jpeg", grid_arrange_shared_legend(power_plots, nrow = 3, ncol = 2, position = "bottom"), device = "jpeg", width = 7, height = 7, units = "in")
+ggsave(file = "Plots/fdr_plot.jpeg", grid_arrange_shared_legend(fdr_plots, nrow = 3, ncol = 2, position = "bottom"), device = "jpeg", width = 7, height = 7, units = "in")
+
+proc.time() - t
+```
