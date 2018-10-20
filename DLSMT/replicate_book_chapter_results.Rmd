@@ -18,14 +18,6 @@ library(ggplot2)
 library(gridExtra)
 library(grid)
 
-# Load helper functions
-source("Helper/find_BH_threshold.R")
-source("Helper/find_Gilbert_threshold.R")
-source("Helper/get_fdr.R")
-source("Helper/get_power.R")
-source("Helper/get_prev.R")
-source("Helper/mcf_detect.R")
-
 # Number of replications
 rep <- 100
 
@@ -40,6 +32,14 @@ pi_0_vec <- c(0.3, 0.6, 0.9)
 
 for (n in n_vec) {
   for (pi_0 in pi_0_vec) {
+    
+    # Load helper functions
+    source("Helper/find_BH_threshold.R")
+    source("Helper/find_Gilbert_threshold.R")
+    source("Helper/get_fdr.R")
+    source("Helper/get_power.R")
+    source("Helper/get_prev.R")
+    source("Helper/mcf_detect.R")
 
     ##########################################################
     ###############      Prepare storage      ################    
@@ -239,6 +239,9 @@ for (n in n_vec) {
     
     # Moniter progress
     print(paste0("The case n = ", n, ", pi_0 = ", pi_0, " has completed!" ))
+    
+    # Clear the workspace as much as possible
+    rm(list = ls()[!ls() %in% c("rep", "alpha", "n_vec", "pi_0_vec", "t", "n", "pi_0")])
   }
 }
 
