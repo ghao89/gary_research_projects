@@ -1,4 +1,4 @@
-### Trials for comparing performance between t-test and test through balanced permutation
+### Trials for comparing statistical power between t-test and test through balanced permutation
 ### This simulation assumes that both groups follow normal distribution with sd = 1
 
 # Number of replications
@@ -11,7 +11,7 @@ alpha <- seq(0.01, 0.25, by = 0.02)
 n <- 4
 # Normal mean for each group
 mu1 <- 0
-mu2 <- 3
+mu2 <- 1
 # Standard deviation for the normal distribution for each group
 sigma <- 1
 
@@ -40,7 +40,7 @@ power_t_test <- unlist(lapply(alpha, FUN = function(x, p_val) sum(p_val <= x)/re
 ##########################################################
 #######    Heuristic balanced permutation test    ########    
 ##########################################################
-mu2_heuristic <- 0.5
+mu2_heuristic <- 0.05
 J <- rpois(m, n/4*(mu2_heuristic - mu1)^2)
 t_sam <- rt(m, df = 2*n - 2 + 2*J)
 # Draw samples from the supposed distribution for the balanced permuted statistic given heuristic alt mean
