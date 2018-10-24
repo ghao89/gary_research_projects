@@ -2,7 +2,7 @@
 ### This simulation assumes that both groups follow normal distribution with sd = 1
 
 # Number of replications
-rep <- 1000
+rep <- 50000
 # Number of samples drawn to get empirical distribution
 m <- 10000
 # Nominal significance level
@@ -11,7 +11,7 @@ alpha <- seq(0.01, 0.25, by = 0.02)
 n <- 4
 # Normal mean for each group
 mu1 <- 0
-mu2 <- 1
+mu2 <- 2
 # Standard deviation for the normal distribution for each group
 sigma <- 1
 
@@ -32,15 +32,15 @@ perm <- perms[, sample(idx, 1)]
 ##########################################################
 
 stat_t_test <- unlist(lapply(1:rep, FUN = function(x, control, treat) 
-  t.test(control[, x], treat[, x])$statistic, control = control, treat = treat))
+  t.test(control[, x], treat[, x], var.equal = T)$statistic, control = control, treat = treat))
 p_val_t_test <- unlist(lapply(1:rep, FUN = function(x, control, treat) 
-  t.test(control[, x], treat[, x])$p.value, control = control, treat = treat))
+  t.test(control[, x], treat[, x], var.equal = T)$p.value, control = control, treat = treat))
 power_t_test <- unlist(lapply(alpha, FUN = function(x, p_val) sum(p_val <= x)/rep, p_val = p_val_t_test))
 
 ##########################################################
 #######    Heuristic balanced permutation test    ########    
 ##########################################################
-mu2_heuristic <- 0.05
+mu2_heuristic <- 0.25
 J <- rpois(m, n/4*(mu2_heuristic - mu1)^2)
 t_sam <- rt(m, df = 2*n - 2 + 2*J)
 # Draw samples from the supposed distribution for the balanced permuted statistic given heuristic alt mean
@@ -69,5 +69,4 @@ plot_data[, 3] <- c(rep("t_test", length(alpha)), rep("perm", length(alpha)))
 colnames(plot_data) <- c("alpha", "power", "method")
 
 ggplot(data = plot_data, aes(x = alpha, y = power, color = method)) + geom_line()
-
 
