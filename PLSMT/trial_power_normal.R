@@ -40,7 +40,7 @@ power_t_test <- unlist(lapply(alpha, FUN = function(x, p_val) sum(p_val <= x)/re
 ##########################################################
 #######    Heuristic balanced permutation test    ########    
 ##########################################################
-mu2_heuristic <- 0.25
+mu2_heuristic <- 1
 J <- rpois(m, n/4*(mu2_heuristic - mu1)^2)
 t_sam <- rt(m, df = 2*n - 2 + 2*J)
 # Draw samples from the supposed distribution for the balanced permuted statistic given heuristic alt mean
