@@ -6,7 +6,7 @@ m <- 5000
 # number of samples in each group
 n <- 2
 # Proportion of null
-pi_0 <- 0.6
+pi_0 <- 1
 # Poisson mean
 mu_pois <- 20
 # Index of true null
