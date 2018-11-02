@@ -1,6 +1,6 @@
 dat <- binom/n_trial
 
-B <- 50
+B <- 100
 
 calc <- function(y, idx) {
   control <- y[, idx]

@@ -4,11 +4,11 @@
 # Total number of tests
 m <- 5000
 # number of samples in each group
-n <- 2
+n <- 10
 # Proportion of null
-pi_0 <- 1
+pi_0 <- 0.01
 # Poisson mean
-mu_pois <- 20
+mu_pois <- 50
 # Index of true null
 true_null_idx <- sample(m, m*pi_0, replace = FALSE)
 non_null_idx <- (1:m)[-true_null_idx]
