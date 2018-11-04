@@ -2,11 +2,11 @@
 # For details of the simulation study, check the book chapter
 
 # Total number of tests
-m <- 5000
+m <- 1000
 # number of samples in each group
-n <- 2
+n <- 4
 # Proportion of null
-pi_0 <- 0.6
+pi_0 <- 0.5
 
 # Index of true null
 true_null_idx <- sample(m, m*pi_0, replace = FALSE)
@@ -18,7 +18,7 @@ mu_treat <- numeric(m)
 
 mu_control <- rnorm(m, 0, 1)
 mu_treat[true_null_idx] <- mu_control[true_null_idx]
-mu_treat[non_null_idx] <- mu_control[non_null_idx] + runif(length(non_null_idx), 0.5, 3)
+mu_treat[non_null_idx] <- mu_control[non_null_idx] + runif(length(non_null_idx), 1, 5)
 
 # Standard deviation of each test in both groups
 sigma_control <- 1
