@@ -1,13 +1,29 @@
-# Simulation setup for multiple Fisher's Exact Test
-# For details of the simulation study, check the book chapter
+# Simulation setup for investigating dmrseq method
+
+# Cut m tests (sites) evenly into r regions so that each region has same number of tests (sites) (prototype)
+# Each region follows a Beta-binomial setup: 
+# 1. the mean methylation level for each site is drawn from a Beta distribution; 
+# 2. the number of trials for each site each sample is drawn uniformly from [5, 100]
+# 3. the mean of Beta distribution for the ith region in control group is calculated from a Sin-function:
+#    mu_i = sin(pi*(i/r))
+# 4. the mean of Beta distribution for the ith region in treatment group:
+#    i.  equals that of control group if that region is null
+#    ii. (mu_i + delta) %% 1, if that region is non-null. delta is uniformly drawn from [0.1, 0.5]
+# The proportion of null regions is pre-set by pi_0
 
 # Total number of tests
 m <- 5000
+
+# Number of regions
+r <- 100
+
 # number of samples in each group
 n <- 2
+
 # Proportion of null
 pi_0 <- 0.6
-# Poisson mean
+
+# Beta mean
 mu_pois <- 20
 # Index of true null
 true_null_idx <- sample(m, m*pi_0, replace = FALSE)
