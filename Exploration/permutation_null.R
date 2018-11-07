@@ -1,5 +1,31 @@
 permutation_null <- function(dat, 
-                             B = NULL) {
+                             B = NULL,
+                             stat = "z_stat") {
+  calc_z <- function(y, 
+                   idx) {
+    control <- y[, idx]
+    treat <- y[, -idx]
+    n <- ncol(control)
+    t_stat <- unlist(lapply(1:nrow(control), FUN = function(x, control, treat) 
+      ifelse(var(control[x,]) == 0 && var(treat[x,]) == 0, 0, (mean(control[x, ]) - mean(treat[x, ]))/sqrt(var(control[x, ])/n + var(treat[x, ])/n)),
+      control = control, treat = treat))
+    z_stat <- qnorm(pt(t_stat, df = 2*n - 2))  
+    return(z_stat)
+  }
+  
+  calc_t <- function(y,
+                     idx) {
+    control <- y[, idx]
+    treat <- y[, -idx]
+    n <- ncol(control)
+    t_stat <- unlist(lapply(1:nrow(control), FUN = function(x, control, treat) 
+      ifelse(var(control[x,]) == 0 && var(treat[x,]) == 0, 0, (mean(control[x, ]) - mean(treat[x, ]))/sqrt(var(control[x, ])/n + var(treat[x, ])/n)),
+      control = control, treat = treat))
+    return(t_stat)    
+  }
+  
+  calc <- ifelse(stat == "z_stat", calc_z, calc_t)
+  
   if (ncol(dat) %% 4 != 0) {
     stop("The number of columns contained in the data should be a multiple of 4!")
   }
@@ -39,18 +65,4 @@ permutation_null <- function(dat,
     return(z)
   }
 
-}
-
-calc <- function(y, 
-                 idx) {
-  
-  control <- y[, idx]
-  treat <- y[, -idx]
-  n <- ncol(control)
-  t_stat <- unlist(lapply(1:nrow(control), FUN = function(x, control, treat) 
-    ifelse(var(control[x,]) == 0 && var(treat[x,]) == 0, 0, (mean(control[x, ]) - mean(treat[x, ]))/sqrt(var(control[x, ])/n + var(treat[x, ])/n)),
-    control = control, treat = treat))
-  z_stat <- qnorm(pt(t_stat, df = 2*n - 2))  
-  return(z_stat)
-  
 }
