@@ -1,15 +1,25 @@
 # Simulation setup for investigating dmrseq method
 
+###############################################################
+##############        Simulation guidence       ###############
+###############################################################
+
 # Cut m tests (sites) evenly into r regions so that each region has same number of tests (sites) (prototype)
 # Each region follows a Beta-binomial setup: 
 # 1. the mean methylation level for each site is drawn from a Beta distribution; 
 # 2. the number of trials for each site each sample is drawn uniformly from [5, 100]
 # 3. the mean of Beta distribution for the ith region in control group is calculated from a Sin-function:
-#    mu_i = sin(pi*(i/r))
+#    mu_i = sin(0.99*pi*(i/r)), use 0.99 to avoid mu = 1
 # 4. the mean of Beta distribution for the ith region in treatment group:
 #    i.  equals that of control group if that region is null
 #    ii. (mu_i + delta) %% 1, if that region is non-null. delta is uniformly drawn from [0.1, 0.5]
 # The proportion of null regions is pre-set by pi_0
+# The number of samples in each group is n
+
+
+###############################################################
+##############        Simulation Setup        #################
+###############################################################
 
 # Total number of tests
 m <- 5000
@@ -21,15 +31,30 @@ r <- 100
 n <- 2
 
 # Proportion of null
-pi_0 <- 0.6
+pi_0 <- 0.9
 
-# Beta mean
-mu_pois <- 20
-# Index of true null
-true_null_idx <- sample(m, m*pi_0, replace = FALSE)
-non_null_idx <- (1:m)[-true_null_idx]
+# Index of true null and true non-null
+true_null_idx <- sample(r, r*pi_0, replace = FALSE)
+non_null_idx <- (1:r)[-true_null_idx]
 
-# Binomial mean
+# Beta mean of nulls
+
+mu_control <- 0.8*(sin((1:r)/r*pi) - 0.5) + 0.5
+
+alpha <- rep(1, r)
+beta <- rep(1, r)
+
+idx <- mu_control < 0.5
+beta[idx] <- alpha[idx]*mu_control[idx]/(1 - mu_control[idx])
+alpha[-idx] <- beta[-idx]*mu_control[-idx]/(1 - mu_control[-idx])
+
+# Beta mean of non-nulls
+mu_treat <- numeric(r)
+mu_treat[true_null_idx] <- mu_control[true_null_idx]
+mu_treat[non_null_idx] <- (mu_control[non_null_idx] + runif(length(non_null_idx), 0.05, 0.5)) %% 1
+
+# Binomial mean for each region
+p_control <- replicate(m/r, rbeta(r, alpha, beta))
 p_1 <- rep(0, m)
 p_2 <- rep(0, m)
 
