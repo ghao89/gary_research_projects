@@ -88,3 +88,4 @@ bs_dat <- BSseq(chr = rep("chr24", m),
                 Cov = cbind(coverage_control, coverage_treat),
                 sampleNames = sampleNames)
 
+save(bs_dat, file = "~/Dropbox/Private/Git_Projects/DLSMT/dmrseq_investigation/bs_dat.Rdata")
