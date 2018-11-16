@@ -23,13 +23,13 @@
 ###############################################################
 
 # Total number of tests
-m <- 5000
+m <- 50000
 
 # Number of regions
-r <- 100
+r <- 500
 
 # number of samples in each group
-n <- 2
+n <- 3
 
 # Proportion of null
 pi_0 <- 0.9
@@ -56,7 +56,7 @@ nv <- 100
 a_control <- beta_mean_control*nv
 b_control <- (1 - beta_mean_control)*nv
 a_treat <- beta_mean_treat*nv
-b_treat <- beta_mean_treat*nv
+b_treat <- (1 - beta_mean_treat)*nv
 
 # Generate the data
 # Coverage in each group
@@ -89,3 +89,5 @@ bs_dat <- BSseq(chr = rep("chr24", m),
                 sampleNames = sampleNames)
 
 save(bs_dat, file = "~/Dropbox/Private/Git_Projects/DLSMT/dmrseq_investigation/bs_dat.Rdata")
+
+non_null_range <- IRanges(start = non_null_idx*100 - 99, end = non_null_idx*100)
