@@ -87,7 +87,7 @@ bs_dat <- BSseq(chr = rep("chr24", m),
                 M = cbind(methy_control, methy_treat),
                 Cov = cbind(coverage_control, coverage_treat),
                 sampleNames = sampleNames)
-
-save(bs_dat, file = "~/Dropbox/Private/Git_Projects/DLSMT/dmrseq_investigation/bs_dat.Rdata")
-
 non_null_range <- IRanges(start = non_null_idx*100 - 99, end = non_null_idx*100)
+save.image(file = "~/Dropbox/Private/Git_Projects/DLSMT/dmrseq_investigation/bs_dat.Rdata")
+
+
