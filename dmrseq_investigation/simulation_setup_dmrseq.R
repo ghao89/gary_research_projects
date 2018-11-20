@@ -17,7 +17,7 @@
 # The proportion of null regions is pre-set by pi_0
 # The number of samples in each group is n
 
-
+library(dmrseq)
 ###############################################################
 ##############        Simulation Setup        #################
 ###############################################################
