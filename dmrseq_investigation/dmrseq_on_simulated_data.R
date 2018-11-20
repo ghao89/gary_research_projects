@@ -10,7 +10,7 @@ fp_bef_merge <- numeric(length(cutoff))
 tp_merge <- numeric(length(cutoff))
 num_detect <- numeric(length(cutoff))
 
-
+t <- proc.time()
 for (c in cutoff) {
   idx <- which(cutoff == c)
   load(file = "~/Dropbox/Private/Git_Projects/DLSMT/dmrseq_investigation/bs_dat.Rdata")
@@ -25,12 +25,10 @@ for (c in cutoff) {
   colnames(p_data) <- c("Group", "Rep")
   pData(bs_dat) <- p_data
   
-  t <- proc.time()
   dmrseq_dmr <- dmrseq(bs = bs_dat, 
                        testCovariate = "Group",
                        cutoff = c,
                        smooth = FALSE)
-  proc.time() - t
   
   detected <- dmrseq_dmr$index[dmrseq_dmr$qval <= alpha]
   num_detect[idx] <- length(detected)
@@ -39,3 +37,5 @@ for (c in cutoff) {
   fp_bef_merge[idx] <- length(detected) - length(tp_bef_merge)
   
 }
+
+proc.time() - t
