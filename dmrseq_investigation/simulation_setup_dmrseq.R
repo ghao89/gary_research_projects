@@ -5,14 +5,14 @@
 ###############################################################
 
 # Cut m tests (sites) evenly into r regions so that each region has same number of tests (sites) (prototype)
-# Each region follows a Beta-binomial setup: 
+# Each region follows a Beta-binomial setup:
 # 1. the mean of Beta distribution for the ith region in control group is calculated from a Sin-function:
 #    mu_i = sin(0.99*pi*(i/r)), use 0.99 to avoid mu = 1
 # 2. the mean of Beta distribution for the ith region in treatment group:
 #    i.  equals that of control group if that region is null
 #    ii. (mu_i + delta) %% 1, if that region is non-null. delta is uniformly drawn from [0.05, 0.5]
 # 3. the mean of Beta distribution for each site in the i-th region is drawn uniformly from [mu_i - 0.05, mu_i + 0.05];
-# 4. the mean methylation level for each site across different samples (within group) is drawn from a Beta distribution; 
+# 4. the mean methylation level for each site across different samples (within group) is drawn from a Beta distribution;
 # 4. the number of trials for each site each sample is drawn uniformly from [5, 100]
 # The proportion of null regions is pre-set by pi_0
 # The number of samples in each group is n
