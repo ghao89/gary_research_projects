@@ -17,27 +17,27 @@ for (i in 1:ncol(perms)) {
 
 alpha <- seq(0.01, 0.5, by = 0.01)
 
-#------------------Individual permutation test------------------#
-p_val <- (ncol(perms) + 1 - rowRanks(stat, ties.method = "min")[,1])/ncol(perms)
-
-p_cand <- (1:ncol(perms))/ncol(perms)
-
-p_count <- unlist(lapply(p_cand, FUN = function(x, p_val) sum(p_val == x), p_val = p_val))
-avg_right <- unlist(lapply(p_cand, 
-                           FUN = function(x, p_val, p_cand) 
-                             sum(p_val > x)/sum(p_cand > x),
-                           p_val = p_val,
-                           p_cand = p_cand))
-lambda <- p_cand[which(avg_right > p_count)[1]]
-
-pi_0_hat <- sum(p_val > lambda)/(1 - lambda)/m
-
-q_val <- unlist(lapply(p_val,
-                       FUN = function(x, pi_0, p_val)
-                         m*pi_0*x/max(sum(p_val <= x), 1),
-                       pi_0 = pi_0_hat,
-                       p_val = p_val))
-
+# #------------------Individual permutation test------------------#
+# p_val <- (ncol(perms) + 1 - rowRanks(stat, ties.method = "min")[,1])/ncol(perms)
+# 
+# p_cand <- (1:ncol(perms))/ncol(perms)
+# 
+# p_count <- unlist(lapply(p_cand, FUN = function(x, p_val) sum(p_val == x), p_val = p_val))
+# avg_right <- unlist(lapply(p_cand, 
+#                            FUN = function(x, p_val, p_cand) 
+#                              sum(p_val > x)/sum(p_cand > x),
+#                            p_val = p_val,
+#                            p_cand = p_cand))
+# lambda <- p_cand[which(avg_right > p_count)[1]]
+# 
+# pi_0_hat <- sum(p_val > lambda)/(1 - lambda)/m
+# 
+# q_val <- unlist(lapply(p_val,
+#                        FUN = function(x, pi_0, p_val)
+#                          m*pi_0*x/max(sum(p_val <= x), 1),
+#                        pi_0 = pi_0_hat,
+#                        p_val = p_val))
+# 
 #------------------Individual t-test------------------#
 p_val_t <- apply(dat, 
                  1, 
@@ -60,6 +60,12 @@ fdr_t <- unlist(lapply(alpha,
 ref_cdf <- ecdf(as.vector(stat[, 2:ncol(stat)]))
 p_val_pool <- 1 - ref_cdf(stat[, 1])
 q_val_pool <- p.adjust(p_val_pool, method = "BH")
+pi_0_hat <- sum(p_val_pool > 0.5)/m/(0.5)
+q_val_pool_storey <- unlist(lapply(p_val_pool,
+                                   FUN = function(x, pi_0, p_val)
+                                     m*pi_0*x/max(sum(p_val <= x), 1),
+                                   pi_0 = pi_0_hat,
+                                   p_val = p_val_pool))
 
 power_pool <- unlist(lapply(alpha, 
                     FUN = function(x, q_val, non_null_idx)
@@ -72,8 +78,21 @@ fdr_pool <- unlist(lapply(alpha,
                       q_val = q_val_pool,
                       non_null_idx = non_null_idx))
 
-plot(alpha, power_pool, col = "red", type = "l")
+power_pool_storey <- unlist(lapply(alpha, 
+                              FUN = function(x, q_val, non_null_idx)
+                                sum(which(q_val <= x) %in% non_null_idx)/length(non_null_idx),
+                              q_val = q_val_pool_storey,
+                              non_null_idx = non_null_idx))
+fdr_pool_storey <- unlist(lapply(alpha, 
+                            FUN = function(x, q_val, non_null_idx)
+                              sum(!(which(q_val <= x) %in% non_null_idx))/sum(q_val <= x),
+                            q_val = q_val_pool_storey,
+                            non_null_idx = non_null_idx))
+
+plot(alpha, power_pool_storey, col = "red", type = "l")
+lines(alpha, power_pool, col = "purple")
 lines(alpha, power_t, col = "blue")
-plot(alpha, fdr_pool, col = "red", type = "l")
+plot(alpha, fdr_pool_storey, col = "red", type = "l")
+lines(alpha, fdr_pool, col = "purple")
 lines(alpha, fdr_t, col = "blue")
-abline(a = 0, b = 0.9)
+abline(a = 0, b = 1)
