@@ -3,7 +3,7 @@
 # Total number of tests
 m <- 5000
 # number of samples in each group
-n <- 5
+n <- 3
 # Proportion of null
 pi_0 <- 0.9
 
