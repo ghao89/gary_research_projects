@@ -14,6 +14,8 @@ library(ggplot2)
 load(file = "dat.Rdata")
 source("Helper/get_power.R")
 source("Helper/get_fdr.R")
+source("Helper/Generalized_FDR_Estimators.R")
+source("Helper/MultipleTesting_HeteroDist_ModFuncs.R")
 
 # Number of tests
 m <- nrow(dat)
@@ -24,28 +26,48 @@ alpha <- seq(0.01, 0.25, by = 0.04)
 # Prepare the result storage
 storey_power <- numeric(length(alpha))
 storey_fdr <- numeric(length(alpha))
+storey_rnd_power <- numeric(length(alpha))
+storey_rnd_fdr <- numeric(length(alpha))
 
 ##########################################################
 ###################      Storey      #####################
 ##########################################################  
 
-# Use the GeneralizedFDREstimators function in fdrDiscreteNull package to get result
-res <- GeneralizedFDREstimators(data = dat, Test = "Fisher's Exact Test", FET_via = "IndividualMarginals", FDRlevel = 0.05)
 
-lambda_storey <- 0.5
-pi0_storey <- min((1 + sum(res$pvalues > lambda_storey))/((1 - lambda_storey)*m), 1)
-q_storey <- pi0_storey*m*res$pvalues/unlist(lapply(res$pvalues, FUN = function(x, pval) max(sum(pval < x),1), pval = res$pvalues))
-storey_detection <- lapply(alpha, FUN = function(x) which(q_storey <= x))
+cellcountsmarginals <- getcellcountsandmarginals_DE(dat)
+simallcellcounts <- cellcountsmarginals[[1]]
+
+pvsupp <- lapply(simallcellcounts, FUN = function(x) pvalFETSupport(x))
+rawpvalues <- unlist(lapply(pvsupp, FUN = function(x) x$rawpvalues))
+rndpvalues <- unlist(lapply(pvsupp, FUN = function(x) x$rndpvalues))
+
+# Based on raw p values
+pi0_storey <- storeyPi0Est(0.5,rawpvalues)
+storey_detection <- lapply(alpha, 
+                           FUN = function(x, pval, pi_0)
+                             StoreyFDREst(pval, x, pi_0)[[1]],
+                           pval = rawpvalues,
+                           pi_0 = pi0_storey)
+
+# Based on randomized p values
+pi0_rnd <- storeyPi0Est(0.5, rndpvalues)
+storey_rnd_detection <- lapply(alpha, 
+                               FUN = function(x, pval, pi_0)
+                                 StoreyFDREst(pval, x, pi_0)[[1]],
+                               pval = rndpvalues,
+                               pi_0 = pi0_rnd)
 
 # Prepare results for plotting
 storey_power <- unlist(lapply(storey_detection, FUN = function(x) get_power(x, non_null_idx)))
 storey_fdr <- unlist(lapply(storey_detection, FUN = function(x) get_fdr(x, true_null_idx)))
+storey_rnd_power <- unlist(lapply(storey_rnd_detection, FUN = function(x) get_power(x, non_null_idx)))
+storey_rnd_fdr <- unlist(lapply(storey_rnd_detection, FUN = function(x) get_fdr(x, true_null_idx)))
 
-summ <- data.frame(matrix(0, ncol = 4, nrow = length(alpha)))
-summ[, 1] <- alpha
-summ[, 2] <- storey_power
-summ[, 3] <- storey_fdr
-summ[, 4] <- rep("Storey", length(alpha))
+summ <- data.frame(matrix(0, ncol = 4, nrow = 2*length(alpha)))
+summ[, 1] <- c(alpha,alpha)
+summ[, 2] <- c(storey_power, storey_rnd_power)
+summ[, 3] <- c(storey_fdr, storey_rnd_fdr)
+summ[, 4] <- c(rep("Storey-Raw", length(alpha)), rep("Storey-Randomized", length(alpha)))
 
 colnames(summ) <- c("alpha", "power", "fdr", "method")
 
