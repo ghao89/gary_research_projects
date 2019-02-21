@@ -251,7 +251,7 @@ getcellcountsandmarginals <- function(countveccontrol,countvectreat)
 #### Subsection 4: Function to two-sided p-value support for FET
 ###################################################################################
 
-pvalFETSupport <- function(cellmatrix)
+pvalFETSupport <- function(cellmatrix, rep_randomized = NULL)
 {
   
   ns = cellmatrix[1,1]; nw = sum(cellmatrix[,1]); nb = sum(cellmatrix[,2]); nd = sum(cellmatrix[1,])
@@ -266,7 +266,21 @@ pvalFETSupport <- function(cellmatrix)
   realizedmass = dhyper(ns, nw, nb, nd)
   
   # two-sided pvalue
-  pvalue <- min(sum(mass[which(mass <= realizedmass)]), 1)
+  # Modified by Gary
+  if (realizedmass == max(mass)) {
+    pvalue <- 1L
+  } else {
+    pvalue <- sum(mass[which(mass <= realizedmass)])
+  }
+  
+  if(which.max(mass) > which(support == ns)) {
+    side <- "left"
+  } else if (which.max(mass) < which(support == ns)){
+    side <- "right"
+  } else {
+    side <- "center"
+  }
+  
   # add: sum of probabilities of y such that P(y) < P(X)
   lessProb = sum(mass[which(mass < realizedmass)])
   # eqProb: Psum_y P(y) st P(y) = P(x)
@@ -284,21 +298,30 @@ pvalFETSupport <- function(cellmatrix)
   }
   # sort pvalue support
   psupport <- unique(sort(temp,decreasing=FALSE))
-  psupport[length(psupport)] <- 1
+  # Modified by Gary
+  psupport[which.max(psupport)] <- 1L
   
   # u either runif or =0.5 or = 1
-  randPval = lessProb + mean(runif(50))*eqProb  # average of 50 realizations
-  randPval = min(1,randPval)
+  # randPval = lessProb + mean(runif(50))*eqProb  # average of 50 realizations
+  if (is.null(rep_randomized)) {
+    randPval = lessProb + runif(1)*eqProb
+    randPval = min(1,randPval)
+  } else {
+    randPval = lessProb + runif(rep_randomized)*eqProb
+    randPval = sapply(randPval, FUN = function(x) min(1, x))
+  }
+  
   
   # mid p-value
-  MidPval = lessProb + 0.5*eqProb
-  MidPval = min(1,MidPval)
+  # MidPval = lessProb + 0.5*eqProb
+  # MidPval = min(1,MidPval)
   # return all three p-values
-  pvals = c(pvalue,MidPval,randPval)
+  # pvals = c(pvalue,lessProb,randPval)
   
   # save probless to the fist entry
-  support<- c(pvals, psupport)
-  return(support)
+  # support<- c(pvals, psupport)
+  res <- list(rawpvalues = pvalue, plessvalues = lessProb, rndpvalues = randPval, support = psupport, side = side)
+  return(res)
 }
 
 ################################################################# ######### ######### ######### #########
